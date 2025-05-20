@@ -1,113 +1,77 @@
 import streamlit as st
-from streamlit_drawable_canvas import st_canvas
-import math
-import random
 
-st.set_page_config(page_title="🎱 간단한 당구 게임")
+st.set_page_config(page_title="🧩 미로 탈출 게임", layout="centered")
 
-st.title("🎱 간단한 당구 게임 (마우스로 드래그해서 치기)")
-st.caption("첫 번째 공(노란색)을 드래그해서 다른 공들을 쳐보세요!")
+st.title("🧩 미로 탈출 게임")
+st.caption("WASD 키를 눌러 캐릭터(🧍)를 출구(🚪)까지 이동하세요!")
 
-canvas_width = 600
-canvas_height = 400
-ball_radius = 15
+# 미로 구성 (0: 길, 1: 벽, S: 시작, E: 출구)
+maze = [
+    ['1', '1', '1', '1', '1', '1', '1'],
+    ['1', 'S', '0', '0', '1', 'E', '1'],
+    ['1', '1', '1', '0', '1', '1', '1'],
+    ['1', '0', '0', '0', '0', '0', '1'],
+    ['1', '0', '1', '1', '1', '0', '1'],
+    ['1', '0', '0', '0', '1', '0', '1'],
+    ['1', '1', '1', '1', '1', '1', '1'],
+]
 
-# 공 상태 초기화
-if "balls" not in st.session_state:
-    st.session_state.balls = []
-    st.session_state.balls.append({
-        "x": canvas_width // 2,
-        "y": canvas_height // 2,
-        "vx": 0,
-        "vy": 0,
-        "color": "#FFD700"  # 노란색 (주공)
-    })
-    for _ in range(4):  # 나머지 공들 (빨간색)
-        st.session_state.balls.append({
-            "x": random.randint(100, canvas_width - 100),
-            "y": random.randint(100, canvas_height - 100),
-            "vx": 0,
-            "vy": 0,
-            "color": "#FF6347"
-        })
+# 캐릭터 시작 위치 찾기
+if "player_pos" not in st.session_state:
+    for i, row in enumerate(maze):
+        for j, cell in enumerate(row):
+            if cell == 'S':
+                st.session_state.player_pos = (i, j)
 
-# 초기화 버튼
-if st.button("🔄 다시 시작"):
-    del st.session_state.balls
-    st.experimental_rerun()
+# 이동 함수
+def move(dx, dy):
+    x, y = st.session_state.player_pos
+    new_x, new_y = x + dx, y + dy
+    if maze[new_x][new_y] != '1':
+        st.session_state.player_pos = (new_x, new_y)
 
-# 드래그 입력 받기
-canvas_result = st_canvas(
-    fill_color="white",
-    stroke_width=2,
-    stroke_color="#000000",
-    background_color="#228B22",
-    update_streamlit=True,
-    height=canvas_height,
-    width=canvas_width,
-    drawing_mode="freedraw",
-    key="canvas",
-)
+# 키보드 컨트롤
+col1, col2, col3 = st.columns(3)
+with col2:
+    if st.button("🔼"):
+        move(-1, 0)
 
-# 입력 해석 - 첫 번째 공만 드래그 가능
-if canvas_result.json_data and len(canvas_result.json_data["objects"]) > 0:
-    line = canvas_result.json_data["objects"][-1]
-    if line["type"] == "line":
-        dx = line["x2"] - line["x1"]
-        dy = line["y2"] - line["y1"]
-        mag = math.hypot(dx, dy)
-        if mag > 0:
-            st.session_state.balls[0]["vx"] = dx / 10
-            st.session_state.balls[0]["vy"] = dy / 10
+col1, col2, col3 = st.columns(3)
+with col1:
+    if st.button("◀️"):
+        move(0, -1)
+with col3:
+    if st.button("▶️"):
+        move(0, 1)
 
-# 충돌 처리
-def handle_collision(b1, b2):
-    dx = b1["x"] - b2["x"]
-    dy = b1["y"] - b2["y"]
-    dist = math.hypot(dx, dy)
-    if dist < ball_radius * 2:
-        # 단순 반사 (속도 교환)
-        b1["vx"], b2["vx"] = b2["vx"], b1["vx"]
-        b1["vy"], b2["vy"] = b2["vy"], b1["vy"]
+col1, col2, col3 = st.columns(3)
+with col2:
+    if st.button("🔽"):
+        move(1, 0)
 
-# 공 업데이트
-for i, ball in enumerate(st.session_state.balls):
-    ball["x"] += ball["vx"]
-    ball["y"] += ball["vy"]
+# 화면 출력
+emoji_map = {
+    '1': '🟥',  # 벽
+    '0': '⬜️',  # 길
+    'S': '⬜️',
+    'E': '🚪',
+}
 
-    # 벽 반사
-    if ball["x"] - ball_radius < 0 or ball["x"] + ball_radius > canvas_width:
-        ball["vx"] *= -1
-    if ball["y"] - ball_radius < 0 or ball["y"] + ball_radius > canvas_height:
-        ball["vy"] *= -1
+output = ""
+for i, row in enumerate(maze):
+    for j, cell in enumerate(row):
+        if (i, j) == st.session_state.player_pos:
+            output += '🧍'
+        else:
+            output += emoji_map.get(cell, '⬜️')
+    output += '\n'
 
-    # 마찰
-    ball["vx"] *= 0.97
-    ball["vy"] *= 0.97
+st.markdown(f"```{output}```")
 
-# 공끼리 충돌
-for i in range(len(st.session_state.balls)):
-    for j in range(i + 1, len(st.session_state.balls)):
-        handle_collision(st.session_state.balls[i], st.session_state.balls[j])
-
-# HTML 캔버스로 공 보여주기
-canvas_code = f"""
-<canvas id="ballCanvas" width="{canvas_width}" height="{canvas_height}" style="border:1px solid black;"></canvas>
-<script>
-const ctx = document.getElementById("ballCanvas").getContext("2d");
-ctx.fillStyle = "#228B22";
-ctx.fillRect(0, 0, {canvas_width}, {canvas_height});
-"""
-
-for ball in st.session_state.balls:
-    canvas_code += f"""
-    ctx.beginPath();
-    ctx.arc({int(ball["x"])}, {int(ball["y"])}, {ball_radius}, 0, Math.PI*2);
-    ctx.fillStyle = "{ball['color']}";
-    ctx.fill();
-    ctx.stroke();
-    """
-
-canvas_code += "</script>"
-st.components.v1.html(canvas_code, height=canvas_height + 10)
-
+# 승리 조건
+x, y = st.session_state.player_pos
+if maze[x][y] == 'E':
+    st.success("🎉 축하합니다! 미로를 탈출했어요!")
+    if st.button("🔁 다시 시작"):
+        del st.session_state.player_pos
+        st.experimental_rerun()

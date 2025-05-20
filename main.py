@@ -1,37 +1,92 @@
-import streamlit as st
+<!DOCTYPE html>
+<html>
+<head>
+    <title>공룡 달리기 게임</title>
+    <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
+    <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+        }
+        #game {
+            width: 600px;
+            height: 200px;
+            border: 2px solid black;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            background-color: #f0f0f0;
+        }
+        #dino {
+            width: 40px;
+            height: 40px;
+            background-color: green;
+            position: absolute;
+            bottom: 0;
+            left: 50px;
+        }
+        #obstacle {
+            width: 20px;
+            height: 40px;
+            background-color: red;
+            position: absolute;
+            bottom: 0;
+            left: 600px;
+        }
+    </style>
+</head>
+<body>
 
-# MBTI 직업 추천 딕셔너리
-mbti_jobs = {
-    "INTJ": ["전략 컨설턴트", "과학자", "소프트웨어 개발자"],
-    "INTP": ["연구원", "데이터 분석가", "이론 물리학자"],
-    "ENTJ": ["경영 컨설턴트", "CEO", "프로젝트 매니저"],
-    "ENTP": ["스타트업 창업가", "기획자", "마케팅 전략가"],
-    "INFJ": ["상담사", "작가", "교사"],
-    "INFP": ["예술가", "심리학자", "작가"],
-    "ENFJ": ["HR 매니저", "교육자", "정치가"],
-    "ENFP": ["광고 기획자", "콘텐츠 크리에이터", "디자이너"],
-    "ISTJ": ["회계사", "군인", "공무원"],
-    "ISFJ": ["간호사", "사회복지사", "초등학교 교사"],
-    "ESTJ": ["은행원", "경영자", "군 간부"],
-    "ESFJ": ["상담 교사", "간호 관리자", "행정가"],
-    "ISTP": ["엔지니어", "파일럿", "기술자"],
-    "ISFP": ["패션 디자이너", "사진작가", "셰프"],
-    "ESTP": ["영업 전문가", "기업가", "스포츠 코치"],
-    "ESFP": ["배우", "MC", "이벤트 플래너"],
-}
+<h1>🦖 공룡 달리기 게임</h1>
+<p>스페이스바를 눌러 점프하세요!</p>
 
-# 제목
-st.title("🎯 MBTI 직업 추천기")
-st.write("MBTI 성격 유형을 입력하면, 어울리는 직업을 추천해드려요!")
+<div id="game">
+    <div id="dino"></div>
+    <div id="obstacle"></div>
+</div>
 
-# 사용자 입력
-user_mbti = st.text_input("당신의 MBTI를 입력해주세요 (예: INFP)").upper()
+<py-script>
+import js
+from pyodide.ffi import create_proxy
+import asyncio
 
-# 추천 결과 출력
-if user_mbti:
-    if user_mbti in mbti_jobs:
-        st.success(f"✅ {user_mbti} 유형에게 어울리는 직업은 다음과 같아요:")
-        for job in mbti_jobs[user_mbti]:
-            st.markdown(f"- {job}")
-    else:
-        st.error("⚠️ 올바른 MBTI 유형을 입력해주세요 (예: ENFP, ISTJ 등).")
+game = js.document.getElementById("game")
+dino = js.document.getElementById("dino")
+obstacle = js.document.getElementById("obstacle")
+
+is_jumping = False
+jump_height = 80
+
+async def jump(event):
+    global is_jumping
+    if event.code == "Space" and not is_jumping:
+        is_jumping = True
+        for i in range(10):
+            dino.style.bottom = f"{i * 8}px"
+            await asyncio.sleep(0.02)
+        for i in range(10, -1, -1):
+            dino.style.bottom = f"{i * 8}px"
+            await asyncio.sleep(0.02)
+        is_jumping = False
+
+async def move_obstacle():
+    while True:
+        left = 600
+        while left > -20:
+            obstacle.style.left = f"{left}px"
+            await asyncio.sleep(0.02)
+            left -= 4
+            # 충돌 감지
+            dino_top = int(dino.style.bottom.replace("px", ""))
+            if 50 <= left <= 90 and dino_top < 40:
+                js.alert("💥 게임 오버!")
+                return
+        await asyncio.sleep(1)
+
+js.document.addEventListener("keydown", create_proxy(jump))
+asyncio.ensure_future(move_obstacle())
+</py-script>
+
+</body>
+</html>

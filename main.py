@@ -1,65 +1,47 @@
-import pygame
+import streamlit as st
 import random
+import time
+
+st.set_page_config(page_title="공룡 달리기 게임", page_icon="🦖")
+
+st.title("🦖 공룡 달리기 게임")
+st.write("스페이스바 대신 버튼을 눌러 장애물을 피하세요!")
 
 # 초기화
-pygame.init()
-screen = pygame.display.set_mode((800, 300))
-clock = pygame.time.Clock()
-font = pygame.font.Font(None, 36)
+if "score" not in st.session_state:
+    st.session_state.score = 0
+    st.session_state.is_game_over = False
 
-# 색상
-WHITE = (255, 255, 255)
-GREEN = (0, 200, 0)
-RED = (200, 0, 0)
+# 게임 종료 시 메시지
+if st.session_state.is_game_over:
+    st.error("💥 충돌! 게임 오버!")
+    st.write(f"🏁 최종 점수: **{st.session_state.score}**")
+    if st.button("🔁 다시 시작"):
+        st.session_state.score = 0
+        st.session_state.is_game_over = False
+    st.stop()
 
-# 공룡, 장애물
-dino = pygame.Rect(50, 250, 40, 40)
-obstacle = pygame.Rect(800, 250, 20, 40)
-jump = False
-jump_speed = 10
-gravity = 1
-velocity = 0
-score = 0
+# 점프 버튼
+if st.button("🆙 점프!"):
+    jump = True
+else:
+    jump = False
 
-running = True
-while running:
-    screen.fill(WHITE)
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
-        if event.type == pygame.KEYDOWN and not jump:
-            if event.key == pygame.K_SPACE:
-                jump = True
-                velocity = -jump_speed
+# 장애물 등장 여부 (30% 확률)
+obstacle = random.choice([True, False, False])
 
-    # 점프 처리
+# 화면 표시
+if obstacle:
+    st.write("🌵 장애물 등장!")
     if jump:
-        dino.y += velocity
-        velocity += gravity
-        if dino.y >= 250:
-            dino.y = 250
-            jump = False
+        st.success("🦖 점프 성공!")
+        st.session_state.score += 1
+    else:
+        st.session_state.is_game_over = True
+        st.experimental_rerun()
+else:
+    st.write("🟢 길이 평탄합니다.")
+    st.session_state.score += 1
 
-    # 장애물 이동
-    obstacle.x -= 5
-    if obstacle.x < -20:
-        obstacle.x = 800
-        score += 1
-
-    # 충돌 검사
-    if dino.colliderect(obstacle):
-        screen.blit(font.render("💥 Game Over", True, RED), (320, 120))
-        pygame.display.update()
-        pygame.time.wait(2000)
-        running = False
-
-    # 화면 그리기
-    pygame.draw.rect(screen, GREEN, dino)
-    pygame.draw.rect(screen, RED, obstacle)
-    score_text = font.render(f"Score: {score}", True, (0, 0, 0))
-    screen.blit(score_text, (10, 10))
-
-    pygame.display.update()
-    clock.tick(60)
-
-pygame.quit()
+# 점수 표시
+st.metric("현재 점수", st.session_state.score)

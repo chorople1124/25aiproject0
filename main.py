@@ -72,6 +72,4 @@ st.markdown(f"```{output}```")
 x, y = st.session_state.player_pos
 if maze[x][y] == 'E':
     st.success("🎉 축하합니다! 미로를 탈출했어요!")
-    if st.button("🔁 다시 시작"):
-        del st.session_state.player_pos
-        st.experimental_rerun()
+    
